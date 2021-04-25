@@ -1,0 +1,106 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "title": "sharq-platform-key-value-store",
+        "version": "1.0.0",
+        "description": "Key-Value store API definition for the sharq Platform"
+    },
+    "paths": {
+        "/apis/keyvaluestore/v1/{storeName}": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+
+                            },
+                            "application/x-value-type": {
+
+                            }
+                        },
+                        "description": "Success"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+
+                            }
+                        },
+                        "description": "Key or Store not found"
+                    }
+                },
+                "operationId": "getValue",
+                "summary": "Gets a list of entries from the store"
+            },
+            "post": {
+                "requestBody": {
+                    "description": "The value to save associated with the given Key",
+                    "content": {
+                        "application/json": {
+
+                        },
+                        "text/plain": {
+
+                        },
+                        "application/x-value-type": {
+
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "The value was created"
+                    },
+                    "404": {
+                        "description": "Store not exists"
+                    },
+                    "200": {
+                        "description": "Some value was already associated and it has been updated"
+                    }
+                },
+                "operationId": "postValue",
+                "summary": "Create or Update value"
+            },
+            "delete": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+
+                            },
+                            "text/plain": {
+
+                            }
+                        },
+                        "description": "Successfully deleted"
+                    }
+                },
+                "operationId": "delete",
+                "summary": "Delete a the value associated to a Key"
+            },
+            "parameters": [
+                {
+                    "name": "key",
+                    "description": "",
+                    "schema": {
+                        "type": "string"
+                    },
+                    "in": "query",
+                    "required": true
+                },
+                {
+                    "name": "storeName",
+                    "schema": {
+                        "type": "string"
+                    },
+                    "in": "path",
+                    "required": true
+                }
+            ]
+        }
+    },
+    "components": {
+
+    }
+}

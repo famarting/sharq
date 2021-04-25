@@ -1,0 +1,119 @@
+///usr/bin/env jbang "$0" "$@" ; exit $?
+//DEPS info.picocli:picocli:4.5.0
+//DEPS com.github.docker-java:docker-java:3.2.1
+//DEPS javax.activation:activation:1.1.1
+//DEPS org.slf4j:slf4j-simple:1.7.25
+//DEPS io.strimzi:strimzi-test-container:0.22.1
+//DEPS io.sharq.platform:sharq-platform-api-outbound-proxy:0.0.1-SNAPSHOT
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.concurrent.Callable;
+
+import com.github.dockerjava.core.DockerClientBuilder;
+
+import io.strimzi.StrimziKafkaContainer;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+
+@Command(name = "sharq", 
+        mixinStandardHelpOptions = true,
+        version = "sharq 0.1",
+        description = "sharq made with jbang",
+        subcommands = {
+            CommandLine.HelpCommand.class,
+            sharq.dev.class,
+        })
+class sharq implements Callable<Integer> {
+
+    public static void main(String... args) {
+        int exitCode = new CommandLine(new sharq()).execute(args);
+        System.exit(exitCode);
+    }
+
+    @Override
+    public Integer call() throws Exception {
+        CommandLine cmd = new CommandLine(this);
+        cmd.usage(System.out);
+        return 0;
+    }
+
+    @Command(name = "dev", description = "manages the default dev environment",
+        subcommands = {
+            sharq.dev.start.class,
+            sharq.dev.stop.class,
+        })
+    static class dev implements Runnable{
+
+        @Override
+        public void run() {
+            CommandLine cmd = new CommandLine(this);
+            cmd.usage(System.out);
+        }
+
+        @Command(name = "start", description = "starts a default dev environment")
+        static class start implements Runnable{
+
+            @Override
+            public void run() {
+                System.out.println("Preparing development environment...");
+                // final var dockerClient = DockerClientBuilder.getInstance().build();
+                // dockerClient.createContainerCmd("infinispan/server:latest")
+                //     .withName("infinispan-server")
+                //     .exec();
+    
+                try {
+
+                    // Process p = Runtime.getRuntime().exec("docker run -d --name infinispan" +
+                    // " -p 11222:11222 -e USER=infinispan -e PASS=infinispan infinispan/server:latest");
+                    // p.waitFor();
+                    // System.out.println("* Infinispan container running");
+
+
+                    // quay.io/strimzi/kafka:latest-kafka-2.6.1
+
+                    StrimziKafkaContainer kafka = new StrimziKafkaContainer();
+                    kafka.start();
+                    System.out.println("* Kafka container running");
+
+                    try {
+                        //wait for input
+                        System.in.read();
+                    } finally {
+                        System.out.println("Shutting down developer environment ...");
+                        kafka.stop();
+                    }
+
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+    
+            }
+    
+        }
+
+        @Command(name = "stop", description = "stops a default dev environment")
+        static class stop implements Runnable{
+
+            @Override
+            public void run() {
+                System.out.println("Shutting down developer environment ...");
+                final var dockerClient = DockerClientBuilder.getInstance().build();
+    
+                dockerClient.listContainersCmd()
+                    .withNameFilter(Collections.singletonList("infinispan"))
+                    .exec()
+                        .forEach(c -> {
+                            dockerClient.stopContainerCmd(c.getId()).exec();
+                            dockerClient.removeContainerCmd(c.getId()).exec();
+                        });
+
+                System.out.println("Dev environment cleaned up :)");
+            }
+    
+        }
+
+    }
+}
+

@@ -1,0 +1,10 @@
+apiVersion: platform.sharq.io/v1alpha1
+kind: KeyValueStore
+metadata:
+  name: infinispan-store
+spec:
+  type: infinispan
+  # config:
+  #   - name: TEST
+  #     value: hello
+

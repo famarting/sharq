@@ -1,0 +1,24 @@
+apiVersion: platform.sharq.io/v1alpha1
+kind: OutboundConnection
+metadata:
+  name: kafka-producer-proxy
+spec:
+  type: kafka
+  config:
+    - name: bootstrap.servers
+      value: my-kafka.my-namspace.svc.cluster.local
+    - name: topic
+      value: my-topic
+---
+apiVersion: platform.sharq.io/v1alpha1
+kind: InboundConnection
+metadata:
+  name: kafka-consumer-proxy
+spec:
+  type: kafka
+  config:
+    - name: bootstrap.servers
+      value: my-kafka.my-namspace.svc.cluster.local
+    - name: topic
+      value: my-topic
+

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.sharq.platform</groupId>
+    <artifactId>sharq-platform-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>sharq Platform - Parent</name>
+
+    <packaging>pom</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.parameters>true</maven.compiler.parameters>
+        <compiler-plugin.version>3.8.1</compiler-plugin.version>
+        <surefire-plugin.version>3.0.0-M5</surefire-plugin.version>
+        <jandex-plugin.version>1.0.8</jandex-plugin.version>
+        <quarkus.version>1.13.2.Final</quarkus.version>
+
+        <dekorate.version>2.0.0.beta8</dekorate.version>
+
+    </properties>
+
+    <modules>
+    	<module>apis/components</module>
+        <module>apis/key-value-store</module>
+        <module>apis/inbound-proxy</module>
+        <module>apis/outbound-proxy</module>
+        <module>components/infinispan</module>
+        <module>components/kafka</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-bom</artifactId>
+                <version>${quarkus.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.sharq.platform</groupId>
+                <artifactId>sharq-platform-api-key-value-store</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+			<dependency>
+		        <groupId>io.sharq.platform</groupId>
+		        <artifactId>sharq-platform-api-outbound-proxy</artifactId>
+		        <version>${project.version}</version>
+		    </dependency>
+
+			<dependency>
+		        <groupId>io.sharq.platform</groupId>
+		        <artifactId>sharq-platform-api-inbound-proxy</artifactId>
+		        <version>${project.version}</version>
+		    </dependency>
+
+			<dependency>
+                <groupId>io.dekorate</groupId>
+                <artifactId>crd-annotations</artifactId>
+                <version>${dekorate.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${compiler-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${surefire-plugin.version}</version>
+                    <configuration>
+                        <systemPropertyVariables>
+                            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        </systemPropertyVariables>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.jboss.jandex</groupId>
+                    <artifactId>jandex-maven-plugin</artifactId>
+                    <version>${jandex-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>make-index</id>
+                            <goals>
+                                <goal>jandex</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+		            <groupId>io.quarkus</groupId>
+		            <artifactId>quarkus-maven-plugin</artifactId>
+		            <version>${quarkus.version}</version>
+		            <extensions>true</extensions>
+		            <executions>
+		                <execution>
+		                    <goals>
+		                        <goal>build</goal>
+		                        <goal>generate-code</goal>
+		                        <goal>generate-code-tests</goal>
+		                    </goals>
+		                </execution>
+		            </executions>
+		        </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>
