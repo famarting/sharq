@@ -14,20 +14,20 @@ import javax.ws.rs.core.Response;
 /**
  * A JAX-RS interface.  An implementation of this interface must be provided.
  */
-@Path("/apis")
+@Path("/apis/keyvaluestore/v1")
 public interface KeyValueStore {
-  @Path("/keyvaluestore/v1/{storeName}")
+  @Path("/{storeName}")
   @GET
   @Produces({"application/json", "application/x-value-type", "text/plain"})
   Response getValue(@QueryParam("key") String key, @PathParam("storeName") String storeName);
 
-  @Path("/keyvaluestore/v1/{storeName}")
+  @Path("/{storeName}")
   @POST
   @Consumes({"application/json", "application/x-value-type", "text/plain"})
   Response postValue(@QueryParam("key") String key, @PathParam("storeName") String storeName,
       InputStream data);
 
-  @Path("/keyvaluestore/v1/{storeName}")
+  @Path("/{storeName}")
   @DELETE
   @Produces({"application/json", "application/x-value-type", "text/plain"})
   Response delete(@QueryParam("key") String key, @PathParam("storeName") String storeName);

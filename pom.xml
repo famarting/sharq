@@ -29,8 +29,10 @@
         <module>apis/key-value-store</module>
         <module>apis/inbound-proxy</module>
         <module>apis/outbound-proxy</module>
+        <module>components/mem</module>
         <module>components/infinispan</module>
         <module>components/kafka</module>
+        <module>utils/consumer</module>
     </modules>
 
     <dependencyManagement>

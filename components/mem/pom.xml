@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <parent>
+    <groupId>io.sharq.platform</groupId>
+    <artifactId>sharq-platform-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>sharq-platform-component-mem</artifactId>
+
+  <dependencies>
+
+	<dependency>
+        <groupId>io.sharq.platform</groupId>
+        <artifactId>sharq-platform-api-key-value-store</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>io.sharq.platform</groupId>
+        <artifactId>sharq-platform-api-outbound-proxy</artifactId>
+    </dependency>
+
+	<dependency>
+        <groupId>io.sharq.platform</groupId>
+        <artifactId>sharq-platform-api-inbound-proxy</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
+    </dependency>
+    
+    <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+        <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+        </plugin>
+        <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+        </plugin>
+        <plugin>
+           <groupId>io.quarkus</groupId>
+           <artifactId>quarkus-maven-plugin</artifactId>
+       </plugin>
+    </plugins>
+  </build>
+
+</project>

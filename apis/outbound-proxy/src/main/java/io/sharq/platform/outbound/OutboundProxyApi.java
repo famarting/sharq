@@ -16,7 +16,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.io.IOUtils;
 
-@Path("/apis")
+@Path("/apis/outbound/v1")
 public class OutboundProxyApi {
 
     private OutboundProxy proxy;
@@ -25,7 +25,7 @@ public class OutboundProxyApi {
         this.proxy = proxy;
     }
 
-    @Path("/outbound/v1/{componentName}")
+    @Path("/{componentName}")
     @POST
     @Produces("*/*")
     public Response send(@PathParam("componentName") String componentName, InputStream data, @Context  HttpHeaders headers) {
