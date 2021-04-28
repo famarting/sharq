@@ -1,0 +1,38 @@
+name: Build All
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-18.04
+    steps:
+
+      - name: Install JDK 11
+        uses: AdoptOpenJDK/install-jdk@v1
+        with:
+          version: 11
+          architecture: x64
+
+      - name: Checkout "${{ github.ref }}"
+        uses: actions/checkout@v2
+
+      - name: verify
+        run: |
+          mvn verify
+
+      - name: Build
+        run: |
+          mvn install -Dquarkus.container-image.build=true -Dquarkus.container-image.group=famargon -Dquarkus.container-image.tag=latest -Dquarkus.container-image.registry=quay.io -Dquarkus.native.container-build=true -Dquarkus.package.type=native
+        # -Dquarkus.container-image.push=true
+        # -Dquarkus.container-image.name=custom-name
+        # TODO push images
+      
+      - name: Images
+        run: docker images | grep sharq
