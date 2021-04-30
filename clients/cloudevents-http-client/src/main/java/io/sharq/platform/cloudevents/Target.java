@@ -1,4 +1,4 @@
-package io.sharq.platform.inbound;
+package io.sharq.platform.cloudevents;
 
 public class Target {
 
@@ -30,6 +30,11 @@ public class Target {
         } else {
             this.path = path;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Target [host=" + host + ", port=" + port + ", path=" + path + "]";
     }
 
 }

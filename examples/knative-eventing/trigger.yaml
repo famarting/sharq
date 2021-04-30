@@ -1,0 +1,15 @@
+apiVersion: eventing.knative.dev/v1beta1
+kind: Trigger
+metadata:
+  name: users-trigger
+spec:
+  filter:
+    attributes:
+      type: users.update
+  broker: default
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: users-service
+    uri: /events

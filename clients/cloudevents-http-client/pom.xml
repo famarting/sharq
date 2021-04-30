@@ -10,13 +10,13 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>sharq-platform-api-inbound-proxy</artifactId>
+  <artifactId>sharq-platform-clients-cloudevents-http-client</artifactId>
 
   <dependencies>
 
 	<dependency>
-		<groupId>io.sharq.platform</groupId>
-		<artifactId>sharq-platform-clients-cloudevents-http-client</artifactId>
+  		<groupId>io.smallrye.reactive</groupId>
+  		<artifactId>smallrye-mutiny-vertx-web-client</artifactId>
 	</dependency>
     
   </dependencies>

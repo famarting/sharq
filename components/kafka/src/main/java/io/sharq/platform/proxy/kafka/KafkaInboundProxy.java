@@ -31,8 +31,8 @@ import org.slf4j.LoggerFactory;
 
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
+import io.sharq.platform.cloudevents.Target;
 import io.sharq.platform.inbound.InboundProxy;
-import io.sharq.platform.inbound.Target;
 import io.sharq.platform.outbound.ComponentException;
 
 @ApplicationScoped
@@ -107,7 +107,7 @@ public class KafkaInboundProxy {
 
                 KafkaComponent<KafkaConsumer<String, byte[]>> component = components.computeIfAbsent(name, n -> computeComponent(config));
 
-                InboundProxy proxy = new InboundProxy(target);
+                InboundProxy proxy = new InboundProxy(target, null);
 
                 pool.execute(() -> {
                     runConsumer(component, proxy);
@@ -141,7 +141,7 @@ public class KafkaInboundProxy {
 
                         pool.execute(() -> {
                             try {
-                                proxy.send(record.value(), metadata).await().atMost(Duration.ofMillis(proxyTimeout));
+                                proxy.proxy(record.value(), metadata).await().atMost(Duration.ofMillis(proxyTimeout));
                             } catch (Exception e) {
                                 logger.warn("Failed to deliver message", e);
                             }

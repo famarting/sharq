@@ -1,5 +1,7 @@
 package io.sharq.platform.inbound.mem;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -14,9 +16,13 @@ import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.quarkus.runtime.StartupEvent;
+import io.sharq.platform.cloudevents.Target;
 import io.sharq.platform.inbound.InboundProxy;
-import io.sharq.platform.inbound.Target;
+import io.sharq.platform.inbound.ProxyFilter;
 import io.sharq.platform.outbound.OutboundProxy;
 import io.vertx.mutiny.core.Vertx;
 
@@ -64,7 +70,7 @@ public class InMemoryInboundProxy {
                         componentProps.put(key, value.get());
 
                     } else {
-                        throw new IllegalStateException("This is not possible");
+                        throw new IllegalStateException("This is not possible , prop = " + prop);
                     }
 
                 });
@@ -79,11 +85,15 @@ public class InMemoryInboundProxy {
                 String host = config.get("host");
                 String port = config.get("port");
                 String path = config.get("path");
+                String attributesFilter = config.get("filter.attributes");
                 Target target = new Target(host, port == null ? null : Integer.valueOf(port), path);
+
+                ProxyFilter filter = createFilter(attributesFilter);
 
                 pool.execute(() -> {
                     String componentName = component == null ? name : component;
-                    InboundProxy proxy = new InboundProxy(target);
+                    InboundProxy proxy = new InboundProxy(target, filter);
+                    logger.info("Created proxy to {}", target);
                     vertx.eventBus().<byte[]>consumer(componentName)
                         .handler(m -> {
 
@@ -91,10 +101,12 @@ public class InMemoryInboundProxy {
 
                             Map<String, String> metadata = new HashMap<>();
                             m.headers().forEach(h -> metadata.put(h.getKey(), h.getValue()));
-                            proxy.send(m.body(), metadata).subscribe()
+                            proxy.proxy(m.body(), metadata)
+//                                .onFailure()
+//                                    .invoke(e -> e.printStackTrace())
+                                .subscribe()
                                 .with(tr -> {
-                                    //TODO send the response to the outbound proxy if there is response
-                                    if (tr.getData() != null) {
+                                    if (tr != null && tr.getData() != null) {
                                         outboundProxy.send(componentName, tr.getData(), tr.getMetadata());
                                     }
                                 });
@@ -105,5 +117,18 @@ public class InMemoryInboundProxy {
 
             });
 
+    }
+
+    private ProxyFilter createFilter(String attributesFilter) {
+        ProxyFilter filter = null;
+        if (attributesFilter != null) {
+            try {
+                Map<String, String> attrs = new ObjectMapper().readValue(attributesFilter.getBytes(), new TypeReference<Map<String, String>>() {});
+                filter = new ProxyFilter(attrs);
+            } catch ( IOException e ) {
+                throw new UncheckedIOException(e);
+            }
+        }
+        return filter;
     }
 }

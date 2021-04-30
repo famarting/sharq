@@ -1,4 +1,4 @@
-package io.sharq.platform.inbound;
+package io.sharq.platform.cloudevents;
 
 public class TargetDeliveryException extends RuntimeException {
 

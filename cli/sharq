@@ -3,18 +3,33 @@
 //DEPS com.github.docker-java:docker-java:3.2.1
 //DEPS javax.activation:activation:1.1.1
 //DEPS org.slf4j:slf4j-simple:1.7.25
-//DEPS io.strimzi:strimzi-test-container:0.22.1
-//DEPS io.sharq.platform:sharq-platform-api-outbound-proxy:0.0.1-SNAPSHOT
+//DEPS io.sharq.platform:sharq-platform-api-components:0.0.1-SNAPSHOT
+//DEPS com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.1
+// IGNORE DEPS io.strimzi:strimzi-test-container:0.22.1
 
+import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import com.github.dockerjava.api.async.ResultCallbackTemplate;
+import com.github.dockerjava.api.command.CreateContainerCmd;
+import com.github.dockerjava.api.model.ExposedPort;
+import com.github.dockerjava.api.model.Frame;
+import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.core.DockerClientBuilder;
 
-import io.strimzi.StrimziKafkaContainer;
+import io.sharq.platform.components.kcompat.Trigger;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 @Command(name = "sharq", 
         mixinStandardHelpOptions = true,
@@ -22,7 +37,8 @@ import picocli.CommandLine.Command;
         description = "sharq made with jbang",
         subcommands = {
             CommandLine.HelpCommand.class,
-            sharq.dev.class,
+            sharq.run.class,
+            sharq.clean.class,
         })
 class sharq implements Callable<Integer> {
 
@@ -38,82 +54,316 @@ class sharq implements Callable<Integer> {
         return 0;
     }
 
-    @Command(name = "dev", description = "manages the default dev environment",
-        subcommands = {
-            sharq.dev.start.class,
-            sharq.dev.stop.class,
-        })
-    static class dev implements Runnable{
+    @Command(name = "clean", description = "cleans sharq components if they running locally")
+    static class clean implements Runnable {
+        @Override
+        public void run() {
+            final var dockerClient = DockerClientBuilder.getInstance().build();
+            dockerClient.listContainersCmd()
+                .exec()
+                .stream()
+                .filter(c -> c.getLabels().containsKey("sharq"))
+                .collect(Collectors.toList())
+                .forEach(c -> {
+                    System.out.println("Removing container " + c.getNames()[0]);
+                    String id = c.getId();
+                    dockerClient.killContainerCmd(id)
+                        .exec();
+                    dockerClient.removeContainerCmd(id)
+                        .exec();
+                });
+        }
+    }
+
+    @Command(name = "run", description = "executes sharq components for running your apps locally")
+    static class run implements Runnable {
+
+        @Option(names = {"-s", "-sub", "--sub"}, description = "List of endpoints to dispatch events to, i.e: topic1:localhost:8080/events")
+        List<String> subs = new ArrayList<>();
+
+        @Option(names = {"-map", "--map", "--mapping"}, description = "Mapping between service name and address, i.e: my-service=localhost:8080")
+        List<String> svcMappingList = new ArrayList<>();
+
+        @Option(names = {"-t", "-trigger", "--trigger"}, description = "Knative trigger file")
+        File triggerFile;
+
+        String sharqImage = "quay.io/famargon/sharq-platform-component-mem:latest";
 
         @Override
         public void run() {
-            CommandLine cmd = new CommandLine(this);
-            cmd.usage(System.out);
-        }
 
-        @Command(name = "start", description = "starts a default dev environment")
-        static class start implements Runnable{
+            Map<String, String> svcMapping = new HashMap<>();
+            if (!svcMappingList.isEmpty()) {
+                for (String kv : svcMappingList) {
+                    String[] kvp = kv.split("=");
+                    if (kvp.length != 2) {
+                        System.err.println("Incorrect services mapping format " + kv );
+                        throw new IllegalArgumentException();
+                    }
+                    svcMapping.put(kvp[0], kvp[1]);
+                }
+            }
 
-            @Override
-            public void run() {
-                System.out.println("Preparing development environment...");
-                // final var dockerClient = DockerClientBuilder.getInstance().build();
-                // dockerClient.createContainerCmd("infinispan/server:latest")
-                //     .withName("infinispan-server")
-                //     .exec();
-    
+            // GenericContainer c = new GenericContainer<>("quay.io/famargon/sharq-platform-component-mem:latest");
+            // c.addExposedPort(10001);
+            // c.setPortBindings(portBindings);
+            final var dockerClient = DockerClientBuilder.getInstance().build();
+            CreateContainerCmd c = dockerClient.createContainerCmd(sharqImage)
+                .withName("sharq-" + UUID.randomUUID().toString())
+                .withLabels(Map.of("sharq", "true"))
+                .withExposedPorts(new ExposedPort(10001))
+                .withPortBindings(PortBinding.parse("10001:10001"))
+                .withTty(true)
+                .withNetworkMode("host");
+
+
+
+            List<String> envs = new ArrayList<>();
+            envs.add("QUARKUS_LOG_LEVEL=INFO");
+
+            for (String sub : subs) {
+                String[] parts = sub.split(":");
+                if (parts.length != 3 && parts.length != 2) {
+                    System.err.println("Incorrect subscription format " + sub + "items " + parts.length);
+                    throw new IllegalArgumentException();
+                }
+
+                String name = null;
+                if (parts.length == 3) {
+                    // example myname:localhost:8080/api
+                    name = parts[0];
+                }
+                if (name == null) {
+                    name = "default";
+                }
+
+                String host = null;
+                if (parts.length == 3) {
+                    host = parts[1];
+                } else {
+                    host = parts[0];
+                }
+                if (host != null && host.isEmpty() || host.isBlank()) {
+                    host = null;
+                }
+
+                String portAndPath = null;
+                if (parts.length == 3) {
+                    portAndPath = parts[2];
+                } else {
+                    portAndPath = parts[1];
+                }
+                String path = "/";
+                String port = portAndPath;
+                if (portAndPath != null) {
+                    int slashIndex = portAndPath.indexOf("/");
+                    path = "/";
+                    port = portAndPath;
+                    if (slashIndex != -1) {
+                        port = String.valueOf(portAndPath.substring(0, slashIndex));
+                        path = portAndPath.substring(slashIndex, portAndPath.length());
+                    }
+                } else {
+                    System.err.println("Incorrect subscription format " + sub + " port and path are mandatory");
+                    throw new IllegalArgumentException();
+                }
+
+                // envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_ENABLE=true");
+                // envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_COMPONENT=" + name);
+                // if (host != null) {
+                //     envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_HOST=" + host);
+                // }
+                // envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_PORT=" + port);
+                // envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_PATH=" + path);
+                
+                addSubscription(envs, name, host, port, path, null);
+
+            }
+
+            if (triggerFile != null) {
+                System.out.println("Configuring subscription based on knative trigger");
+
                 try {
+                    Trigger trigger = new YAMLMapper().readValue(triggerFile, Trigger.class);
 
-                    // Process p = Runtime.getRuntime().exec("docker run -d --name infinispan" +
-                    // " -p 11222:11222 -e USER=infinispan -e PASS=infinispan infinispan/server:latest");
-                    // p.waitFor();
-                    // System.out.println("* Infinispan container running");
-
-
-                    // quay.io/strimzi/kafka:latest-kafka-2.6.1
-
-                    StrimziKafkaContainer kafka = new StrimziKafkaContainer();
-                    kafka.start();
-                    System.out.println("* Kafka container running");
-
-                    try {
-                        //wait for input
-                        System.in.read();
-                    } finally {
-                        System.out.println("Shutting down developer environment ...");
-                        kafka.stop();
+                    String name = trigger.getSpec().getBroker();
+                    if (name == null) {
+                        name = "default";
+                    }
+                    String filterAttributes = null;
+                    if (trigger.getSpec().getFilter() != null && trigger.getSpec().getFilter().getAttributes() != null) {
+                        filterAttributes = new ObjectMapper().writeValueAsString(trigger.getSpec().getFilter().getAttributes());
                     }
 
-                } catch (Exception e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    String svcName = trigger.getSpec().getSubscriber().getRef().getName();
+                    if (svcName == null) {
+                        System.err.println("Incorrect trigger missing subscriber name");
+                        throw new IllegalArgumentException();
+                    }
+
+                    String path = trigger.getSpec().getSubscriber().getUri();
+                    if (path == null) {
+                        path = "/";
+                    }
+
+                    if (!svcMapping.containsKey(svcName)) {
+                        System.err.println("Missing service mapping name= " + svcName);
+                        throw new IllegalArgumentException();
+                    }
+                    String address = svcMapping.get(svcName);
+                    String[] addressParts = address.split(":");
+                    if (addressParts.length != 2) {
+                        System.err.println("Incorrect address format " + address);
+                        throw new IllegalArgumentException();
+                    }
+                    String host = addressParts[0];
+                    String port = addressParts[1];
+
+                    addSubscription(envs, name, host, port, path, filterAttributes);
+
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-    
+
             }
-    
+
+
+            c.withEnv(envs);
+
+
+            try {
+
+                // c.start();
+                var resp = c.exec();
+
+                try {
+
+                    dockerClient.startContainerCmd(resp.getId()).exec();
+
+                    dockerClient
+                        .logContainerCmd(resp.getId())
+                        .withStdErr(true)
+                        .withStdOut(true)
+                        .withFollowStream(true)
+                        .withTailAll()
+                        .exec(new printer())
+                        .awaitStarted();
+
+                    System.out.println("* Running Sharq platform ( press any key to stop the process )");
+                    //wait for input
+                    System.in.read();
+                } finally {
+                    System.out.println("Shutting down developer environment ...");
+                    // c.stop();
+                    dockerClient.stopContainerCmd(resp.getId()).exec();
+                }
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
         }
 
-        @Command(name = "stop", description = "stops a default dev environment")
-        static class stop implements Runnable{
-
-            @Override
-            public void run() {
-                System.out.println("Shutting down developer environment ...");
-                final var dockerClient = DockerClientBuilder.getInstance().build();
-    
-                dockerClient.listContainersCmd()
-                    .withNameFilter(Collections.singletonList("infinispan"))
-                    .exec()
-                        .forEach(c -> {
-                            dockerClient.stopContainerCmd(c.getId()).exec();
-                            dockerClient.removeContainerCmd(c.getId()).exec();
-                        });
-
-                System.out.println("Dev environment cleaned up :)");
+        private void addSubscription(List<String> envs, String name, String host, String port, String path, String filterAttributesJson) {
+            envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_ENABLE=true");
+            envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_COMPONENT=" + name);
+            if (host != null) {
+                envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_HOST=" + host);
             }
-    
+            envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_PORT=" + port);
+            envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_PATH=" + path);
+            if (filterAttributesJson != null) {
+                envs.add("SHARQ_INBOUND_" + name.toUpperCase() + "_FILTER_ATTRIBUTES=" + filterAttributesJson);
+            }
         }
 
     }
+
+    static class printer extends ResultCallbackTemplate<printer, Frame> {
+
+        @Override
+        public void onNext(Frame object) {
+            System.out.println(object.toString());
+        }
+
+    }
+
+    // @Command(name = "dev", description = "manages the default dev environment",
+    //     subcommands = {
+    //         sharq.dev.start.class,
+    //         sharq.dev.stop.class,
+    //     })
+    // static class dev implements Runnable{
+
+    //     @Override
+    //     public void run() {
+    //         CommandLine cmd = new CommandLine(this);
+    //         cmd.usage(System.out);
+    //     }
+
+    //     @Command(name = "start", description = "starts a default dev environment")
+    //     static class start implements Runnable{
+
+    //         @Override
+    //         public void run() {
+    //             System.out.println("Preparing development environment...");
+    //             // final var dockerClient = DockerClientBuilder.getInstance().build();
+    //             // dockerClient.createContainerCmd("infinispan/server:latest")
+    //             //     .withName("infinispan-server")
+    //             //     .exec();
+    
+    //             try {
+
+    //                 // Process p = Runtime.getRuntime().exec("docker run -d --name infinispan" +
+    //                 // " -p 11222:11222 -e USER=infinispan -e PASS=infinispan infinispan/server:latest");
+    //                 // p.waitFor();
+    //                 // System.out.println("* Infinispan container running");
+
+
+    //                 // quay.io/strimzi/kafka:latest-kafka-2.6.1
+
+    //                 StrimziKafkaContainer kafka = new StrimziKafkaContainer();
+    //                 kafka.start();
+    //                 System.out.println("* Kafka container running");
+
+    //                 try {
+    //                     //wait for input
+    //                     System.in.read();
+    //                 } finally {
+    //                     System.out.println("Shutting down developer environment ...");
+    //                     kafka.stop();
+    //                 }
+
+    //             } catch (Exception e) {
+    //                 // TODO Auto-generated catch block
+    //                 e.printStackTrace();
+    //             }
+    
+    //         }
+    
+    //     }
+
+    //     @Command(name = "stop", description = "stops a default dev environment")
+    //     static class stop implements Runnable{
+
+    //         @Override
+    //         public void run() {
+    //             System.out.println("Shutting down developer environment ...");
+    //             final var dockerClient = DockerClientBuilder.getInstance().build();
+    
+    //             dockerClient.listContainersCmd()
+    //                 .withNameFilter(Collections.singletonList("infinispan"))
+    //                 .exec()
+    //                     .forEach(c -> {
+    //                         dockerClient.stopContainerCmd(c.getId()).exec();
+    //                         dockerClient.removeContainerCmd(c.getId()).exec();
+    //                     });
+
+    //             System.out.println("Dev environment cleaned up :)");
+    //         }
+    
+    //     }
+
+    // }
 }
 
