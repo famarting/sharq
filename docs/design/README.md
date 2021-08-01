@@ -51,5 +51,7 @@ Full development lifecycle:
             * knative eventing (api compatible with our inbound and outbound proxies)
             * Sharq operator (to be decided if we implement it) to deploy the proxy sidecar
 
-
+* Abstract app deployment manifests
+    * k8s operator
+    * client side transformation to standard manifests
 

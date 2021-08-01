@@ -1,0 +1,30 @@
+apiVersion: config.authorino.3scale.net/v1beta1
+kind: Service
+metadata:
+  name: talker-api-protection
+  # default authorino installation is namespaced
+  namespace: authorino
+spec:
+  hosts:
+    - talker-api
+    - talker-api-authorino.127.0.0.1.nip.io
+  identity:
+    - name: friends
+      apiKey:
+        labelSelectors:
+          authorino.3scale.net/managed-by: authorino
+          group: friends
+      credentials:
+        in: authorization_header
+        keySelector: APIKEY
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: friend-1-api-key-1
+  labels:
+    authorino.3scale.net/managed-by: authorino
+    group: friends
+stringData:
+  api_key: ndyBzreUzF4zqDQsqSPMHkRhriEOtcRx
+type: Opaque

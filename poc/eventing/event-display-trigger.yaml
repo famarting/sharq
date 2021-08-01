@@ -1,0 +1,15 @@
+apiVersion: eventing.knative.dev/v1
+kind: Trigger
+metadata:
+  name: event-display-trigger
+spec:
+  # filter:
+  #   attributes:
+  #     type: warehouse.order.v1
+  broker: default
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: event-display
+    # uri: /custompath

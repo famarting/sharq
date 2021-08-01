@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: broker-ingress
+  namespace: knative-eventing
+spec:
+  rules:
+    - host: "broker.127.0.0.1.nip.io"
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: broker-ingress
+                port:
+                  number: 80
