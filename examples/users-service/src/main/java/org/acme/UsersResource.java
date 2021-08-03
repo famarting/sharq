@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.sharq.platform.cloudevents.CloudEventsHttpClient;
 import io.sharq.platform.cloudevents.Target;
-import io.sharq.platform.kvs.KeyValueStore;
+import io.sharq.platform.kvs.client.quarkus.KeyValueStore;
 
 @Path("/")
 public class UsersResource {

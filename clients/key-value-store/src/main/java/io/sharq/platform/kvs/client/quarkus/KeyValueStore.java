@@ -1,4 +1,4 @@
-package io.sharq.platform.kvs;
+package io.sharq.platform.kvs.client.quarkus;
 
 import java.io.InputStream;
 

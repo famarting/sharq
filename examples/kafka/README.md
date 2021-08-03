@@ -2,7 +2,7 @@
 
 Run kafka proxy
 ```
-SHARQ_INBOUND_TEST_TOPIC=test1 SHARQ_OUTBOUND_TEST_TOPIC=test1 KAFKA_BOOTSTRAP_SERVERS=localhost:32814 mvn quarkus:dev -pl components/kafka/
+SHARQ_INBOUND_TEST_TOPIC=test1 SHARQ_OUTBOUND_TEST_TOPIC=test1 KAFKA_BOOTSTRAP_SERVERS=localhost:9092 mvn quarkus:dev -pl components/kafka/
 ```
 
 ```

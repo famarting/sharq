@@ -5,13 +5,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.StreamSupport;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
@@ -24,7 +21,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,11 +30,15 @@ import io.quarkus.runtime.StartupEvent;
 import io.sharq.platform.cloudevents.Target;
 import io.sharq.platform.inbound.InboundProxy;
 import io.sharq.platform.outbound.ComponentException;
+import io.vertx.mutiny.core.Vertx;
 
 @ApplicationScoped
 public class KafkaInboundProxy {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    @Inject
+    Vertx vertx;
 
     @Inject
     @Named("default-kafka-broker")
@@ -98,6 +98,8 @@ public class KafkaInboundProxy {
         inboundComponentsConfiguration
             .forEach((name, config) -> {
 
+                //name and config.componentName are equal
+
                 logger.info("Configuring component {} properties {}", config.componentName, config.kafkaProperties);
 
                 String host = config.kafkaProperties.remove("target.host");
@@ -105,9 +107,9 @@ public class KafkaInboundProxy {
                 String path = config.kafkaProperties.remove("target.path");
                 Target target = new Target(host, port == null ? null :Integer.valueOf(port), path);
 
-                KafkaComponent<KafkaConsumer<String, byte[]>> component = components.computeIfAbsent(name, n -> computeComponent(config));
+                KafkaComponent<KafkaConsumer<String, byte[]>> component = components.computeIfAbsent(config.componentName, n -> computeComponent(config));
 
-                InboundProxy proxy = new InboundProxy(target, null);
+                InboundProxy proxy = new InboundProxy(vertx, target, null);
 
                 pool.execute(() -> {
                     runConsumer(component, proxy);
@@ -159,7 +161,7 @@ public class KafkaInboundProxy {
 
         String topic = config.kafkaProperties.remove("topic");
         if (topic == null || topic.isEmpty()) {
-            throw new ComponentException(Status.NOT_FOUND, "component " + config.componentName + " not found");
+            throw new ComponentException(Status.NOT_FOUND, "component " + config.componentName + " not found, missing topic config");
         }
 
         Map<String, Object> kafkaConfiguration = new HashMap<>(defaultKafkaConfig);

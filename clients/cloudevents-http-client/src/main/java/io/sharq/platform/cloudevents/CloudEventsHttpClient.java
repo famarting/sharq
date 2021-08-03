@@ -17,8 +17,11 @@ public class CloudEventsHttpClient {
     private final WebClient client;
 
     public CloudEventsHttpClient(Target target) {
+        this(Vertx.vertx(), target);
+    }
+
+    public CloudEventsHttpClient(Vertx vertx, Target target) {
         this.target = target;
-        Vertx vertx = Vertx.vertx();
         HttpClient httpClient = vertx.createHttpClient(new HttpClientOptions());
         client = WebClient.wrap(httpClient);
     }

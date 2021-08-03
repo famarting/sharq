@@ -92,7 +92,7 @@ public class InMemoryInboundProxy {
 
                 pool.execute(() -> {
                     String componentName = component == null ? name : component;
-                    InboundProxy proxy = new InboundProxy(target, filter);
+                    InboundProxy proxy = new InboundProxy(vertx, target, filter);
                     logger.info("Created proxy to {}", target);
                     vertx.eventBus().<byte[]>consumer(componentName)
                         .handler(m -> {

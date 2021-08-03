@@ -52,5 +52,16 @@ jobs:
             -Dquarkus.package.type=native \
             -pl components/mem/
 
+      - name: Build - kafka component native
+        run: |
+          mvn install -Dquarkus.container-image.build=true \
+            -Dquarkus.container-image.group=famargon \
+            -Dquarkus.container-image.tag=latest-native \
+            -Dquarkus.container-image.registry=quay.io \
+            -Dquarkus.container-image.push=true \
+            -Dquarkus.native.container-build=true \
+            -Dquarkus.package.type=native \
+            -pl components/kafka/
+
       - name: Images
         run: docker images | grep sharq

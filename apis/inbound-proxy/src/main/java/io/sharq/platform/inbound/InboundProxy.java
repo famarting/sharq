@@ -7,15 +7,16 @@ import io.sharq.platform.cloudevents.CloudEventsHttpClient;
 import io.sharq.platform.cloudevents.Target;
 import io.sharq.platform.cloudevents.TargetResponse;
 import io.smallrye.mutiny.Uni;
+import io.vertx.mutiny.core.Vertx;
 
 public class InboundProxy {
 
     private final ProxyFilter filter;
     private final CloudEventsHttpClient client;
 
-    public InboundProxy(Target target, ProxyFilter filter) {
+    public InboundProxy(Vertx vertx, Target target, ProxyFilter filter) {
         this.filter = filter;
-        client = new CloudEventsHttpClient(target);
+        client = new CloudEventsHttpClient(vertx, target);
     }
 
     public Uni<TargetResponse> proxy(byte[] data, Map<String, String> metadata) {

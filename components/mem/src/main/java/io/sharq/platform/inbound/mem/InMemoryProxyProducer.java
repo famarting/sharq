@@ -1,4 +1,4 @@
-package io.sharq.platform.outbound.mem;
+package io.sharq.platform.inbound.mem;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
