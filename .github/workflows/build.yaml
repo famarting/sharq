@@ -23,9 +23,9 @@ jobs:
       - name: Checkout "${{ github.ref }}"
         uses: actions/checkout@v2
 
-      - name: verify
+      - name: build
         run: |
-          mvn verify
+          mvn install
 
       - name: Login to Quay
         run: |
