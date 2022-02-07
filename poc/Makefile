@@ -4,7 +4,7 @@ AUTHORINO_BRANCH?=v0.3.0-pre
 kind_start:
 	kind create cluster --config kind.yaml
 	$(MAKE) install_nginx_ingress
-	$(MAKE) install_certmanager
+# $(MAKE) install_certmanager
 
 # using nginx ingress version v0.46.0
 install_nginx_ingress:

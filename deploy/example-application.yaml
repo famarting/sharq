@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name:  users-service
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sharq-configuration-read
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: users-service-sharq-configuration-read
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sharq-configuration-read
+subjects:
+- kind: ServiceAccount
+  name: users-service
+  namespace: sharq-example
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-service
+  namespace: sharq-example
+  labels:
+    app: users-service
+spec:
+  selector:
+    matchLabels:
+      app: users-service
+  template:
+    metadata:
+      labels:
+        app: users-service
+    spec:
+      serviceAccountName: users-service
+      containers:
+      - name: sharq
+        image: quay.io/famargon/sharq-mem-k8s:latest
+        env:
+        - name: APP_NAME
+          value: "users-service"
+        ports:
+        - containerPort: 10001
+      # - name: users-service
+      #   image: quay.io/3scale/authorino:users-service
+      #   env:
+      #   - name: PORT
+      #     value: "3000"
+      #   ports:
+      #   - containerPort: 3000
+  replicas: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sharq-users-service
+spec:
+  selector:
+    app: users-service
+  ports:
+    - port: 10001
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: ingress-sharq-users-service
+spec:
+  rules:
+    - host: "sharq.127.0.0.1.nip.io"
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: envoy
+                port:
+                  number: 10001

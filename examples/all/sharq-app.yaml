@@ -1,0 +1,17 @@
+apiVersion: platform.sharq.io/v1alpha1
+kind: SharqApplication
+metadata:
+  name: example-app-config
+spec:
+  events:
+    outbound:
+      - my-custom-eventing-addr
+      - test1
+    inbound:
+      - name: my-custom-eventing-addr
+        sendTo: /events
+      - name: test1
+        sendTo: /events
+  stores:
+    - test-store
+    - store2

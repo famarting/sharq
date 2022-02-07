@@ -1,0 +1,23 @@
+apiVersion: platform.sharq.io/v1alpha1
+kind: SharqInfra
+metadata:
+  name: sharq
+spec:
+  kafka:
+    bootstrapServers: my-kafka.my-namspace.svc.cluster.local
+    topicMappings:
+      events:
+        inbound:
+          - name: my-custom-eventing-addr
+            topic: my-topic
+          - name: test1
+            topic: test-topic
+        outbound:
+          - name: my-custom-eventing-addr
+            topic: my-topic
+          - name: test1
+      stores:
+        - name: test-store
+          topic: store-topic
+        - name: store2
+          topic: store2-topic
